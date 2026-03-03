@@ -79,13 +79,17 @@
 
 ## 📸 Screenshots
 
-> Add your screenshots here:
-> 
+### Dark Mode
+![Dashboard Dark](docs/screenshots/dashboard-dark.png)
 
-> docs/screenshots/dashboard-dark.png
-> docs/screenshots/dashboard-light.png
-> docs/screenshots/missions.png
-> docs/screenshots/duel.png
+### Light Mode
+![Dashboard Light](docs/screenshots/dashboard-light.png)
+
+### Missions & Gamification
+![Missions](docs/screenshots/missions.png)
+
+### Pilot Duel
+![Duel](docs/screenshots/duel.png)
 
 
 ---
