@@ -1,0 +1,17 @@
+{
+    "name": "gsg/airlineinfopulse",
+    "type": "phpvms-module",
+    "description": "Airline Info Pulse Dashboard für phpVMS 7",
+    "authors": [
+        {
+            "name": "German Sky Group",
+            "email": "info@german-sky-group.eu"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Modules\\AirlineInfoPulse\\": ""
+        }
+    }
+}

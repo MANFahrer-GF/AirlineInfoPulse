@@ -1,0 +1,13 @@
+{
+    "name": "AirlineInfoPulse",
+    "alias": "airlineinfopulse",
+    "description": "Airline Info Pulse Dashboard - Umfassendes Statistik-Dashboard für Virtual Airlines",
+    "keywords": ["phpvms", "module", "dashboard", "statistics"],
+    "priority": 0,
+    "providers": [
+        "Modules\\AirlineInfoPulse\\Providers\\AirlineInfoPulseServiceProvider"
+    ],
+    "files": [],
+    "requires": [],
+    "version": "1.0.0"
+}
