@@ -131,21 +131,46 @@ The module reads from these standard phpVMS tables (read-only, no migrations nee
 
 ## 🚀 Installation
 
-### Step 1 — Download & Copy
+### Method A — phpVMS Admin Panel (empfohlen)
+
+Der einfachste Weg — kein FTP, kein SSH nötig:
+
+1. **ZIP herunterladen** — Lade `AirlineInfoPulse.zip` von der [Releases](../../releases) Seite herunter
+2. **Admin Panel öffnen** — Gehe zu `https://deine-domain.de/admin`
+3. **Modul hochladen** — Navigiere zu **addons/modules** → klicke oben rechts **"Add New"**
+4. **ZIP auswählen** — Klicke "Datei auswählen", wähle die `AirlineInfoPulse.zip` und klicke **"Add Module"**
+5. **Cache leeren** — Gehe zu **maintenance** (in der linken Sidebar) und klicke **"Clear All Caches"**
+6. **Fertig!** — Das Modul ist automatisch aktiv. Navigiere zu `/airline-info-pulse`
+
+> **Wichtig:** Der ZIP-Name muss `AirlineInfoPulse.zip` sein und der Ordner im ZIP muss `AirlineInfoPulse/` heißen (ist beim Release-Download bereits korrekt).
+
+---
+
+### Method B — Manuell per FTP / SSH
+
+Falls der Upload über das Admin Panel nicht funktioniert:
+
+#### Per SSH / Terminal
 
 ```bash
-# Clone or download the repository
+# Repository klonen oder ZIP entpacken
 git clone https://github.com/YOUR-USERNAME/AirlineInfoPulse.git
 
-# Copy into your phpVMS modules directory
+# In das phpVMS modules-Verzeichnis kopieren
 cp -r AirlineInfoPulse/ /path/to/phpvms/modules/AirlineInfoPulse/
 ```
 
-Or download the ZIP from the [Releases](../../releases) page and extract it into `modules/`.
+#### Per FTP / File Manager
 
-### Step 2 — Activate the Module
+1. ZIP entpacken auf dem lokalen PC
+2. Den gesamten `AirlineInfoPulse/`-Ordner nach `modules/` auf dem Server hochladen
+3. Ergebnis: `modules/AirlineInfoPulse/module.json` muss existieren
 
-Open `modules_statuses.json` in your phpVMS root directory and add:
+> ⚠️ Kein doppelter Ordner: `modules/AirlineInfoPulse/AirlineInfoPulse/` ist **falsch**.
+
+#### Modul aktivieren
+
+Öffne `modules_statuses.json` im phpVMS Root-Verzeichnis und füge hinzu:
 
 ```json
 {
@@ -153,22 +178,24 @@ Open `modules_statuses.json` in your phpVMS root directory and add:
 }
 ```
 
-> If the file doesn't exist yet, create it with the content above. If it already exists, add the line inside the existing JSON object.
+> Falls die Datei bereits existiert, füge `"AirlineInfoPulse": true` mit einem Komma nach dem letzten Eintrag ein.
 
-### Step 3 — Clear Caches
+#### Cache leeren
 
+**Mit SSH:**
 ```bash
-php artisan config:clear
-php artisan cache:clear
-php artisan view:clear
-php artisan route:clear
+php artisan config:clear && php artisan cache:clear && php artisan view:clear && php artisan route:clear
 ```
 
-If you're on shared hosting without SSH access, you can also clear caches through the phpVMS Admin Panel under **Settings → Maintenance**.
+**Ohne SSH:** Admin Panel → **maintenance** → **"Clear All Caches"**
 
-### Step 4 — Add Navigation Link
+---
 
-In your theme layout file (e.g., `resources/views/layouts/default.blade.php`), add a link to the navigation menu:
+### Nach der Installation
+
+#### Navigation Link hinzufügen
+
+In deinem Theme-Layout (z.B. `resources/views/layouts/default.blade.php`):
 
 ```html
 <a class="nav-link" href="{{ route('airlineinfopulse.index') }}">
@@ -176,7 +203,7 @@ In your theme layout file (e.g., `resources/views/layouts/default.blade.php`), a
 </a>
 ```
 
-Or for the **DisposableTheme** sidebar:
+Für **DisposableTheme** Sidebar:
 
 ```html
 <li class="nav-item">
@@ -187,15 +214,13 @@ Or for the **DisposableTheme** sidebar:
 </li>
 ```
 
-### Step 5 — Verify
+#### Prüfen
 
-Navigate to:
+Navigiere zu:
 
 ```
-https://your-domain.com/airline-info-pulse
+https://deine-domain.de/airline-info-pulse
 ```
-
-You should see the full dashboard. If you get a 404, re-run `php artisan route:clear`.
 
 ---
 
@@ -522,13 +547,15 @@ It covers all dashboard sections, what each statistic means, how to use the pilo
 
 | Problem | Solution |
 |---------|----------|
-| **404 Not Found** | Run `php artisan route:clear` and check `modules_statuses.json` |
-| **Class not found** | Folder must be named exactly `AirlineInfoPulse` (case-sensitive) |
+| **404 Not Found** | Clear caches (via Admin Panel or `php artisan route:clear`) and check `modules_statuses.json` |
+| **404 after FTP upload** | Make sure `modules_statuses.json` has `"AirlineInfoPulse": true` and caches are cleared. Delete `bootstrap/cache/*` and `storage/framework/views/*` via FTP if needed |
+| **Class not found** | Folder must be named exactly `AirlineInfoPulse` (case-sensitive). Check there's no double folder (`modules/AirlineInfoPulse/AirlineInfoPulse/`) |
 | **KPIs show 0** | Only accepted PIREPs are counted — check PIREP status in admin |
 | **Maintenance not in feed** | Requires [DisposableBasic](https://github.com/FatihKoz/DisposableBasic) module |
-| **Wrong language** | Run `php artisan cache:clear && php artisan view:clear` |
+| **Wrong language** | Clear caches: Admin Panel → Maintenance → Clear All, or delete `storage/framework/views/*` via FTP |
 | **Dark mode not detected** | Set `data-bs-theme="dark"` on `<html>` in your theme |
 | **Slow page load** | Check database indexes on `pireps.state`, `pireps.user_id`, `pireps.submitted_at` |
+| **Blank page / 500 error** | Check `storage/logs/laravel.log` via FTP for the exact error message |
 
 ---
 
