@@ -52,13 +52,13 @@
       <div class="col-6 col-sm-4 col-lg-2">
         <div class="ap-my-kpi">
           <div class="ap-my-kpi-label"><i class="ph-fill ph-ruler me-1"></i>{{ $t('distance') }}</div>
-          <div class="ap-my-kpi-val ap-mono" style="font-size:1rem;">{{ number_format($cockpit['distance'] * $units['distance_factor'], 0, '', ' ') }} {{ $units['distance_label'] }}</div>
+          <div class="ap-my-kpi-val ap-mono" style="font-size:1rem;">{{ number_format($distVal($cockpit['distance']), 0, '', ' ') }} {{ $units['distance_label'] }}</div>
         </div>
       </div>
       <div class="col-6 col-sm-4 col-lg-2">
         <div class="ap-my-kpi">
           <div class="ap-my-kpi-label"><i class="ph-fill ph-gas-pump me-1"></i>{{ $t('fuel') }}</div>
-          <div class="ap-my-kpi-val ap-mono" style="font-size:1rem;">{{ number_format($cockpit['fuel'] * $units['fuel_factor'], 0, '', ' ') }} {{ $units['fuel_label'] }}</div>
+          <div class="ap-my-kpi-val ap-mono" style="font-size:1rem;">{{ number_format($fuelVal($cockpit['fuel']), 0, '', ' ') }} {{ $units['fuel_label'] }}</div>
         </div>
       </div>
       <div class="col-6 col-sm-4 col-lg-2">

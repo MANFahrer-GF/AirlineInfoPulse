@@ -55,6 +55,10 @@ return [
     // ── Quickstart ──
     'quickstart'       => 'Schnellstart',
     'view_flight'      => 'Flug ansehen',
+    'bid_flight'       => 'Buchen',
+    'bid_placed'       => 'Gebucht!',
+    'bid_removed'      => 'Buchung entfernt',
+    'bid_error'        => 'Buchung fehlgeschlagen',
     'loading_flights'  => 'Flüge werden geladen…',
     'region_eu'        => 'Europa',
     'region_asia'      => 'Asien',

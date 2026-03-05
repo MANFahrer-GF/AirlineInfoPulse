@@ -368,9 +368,23 @@ html.ap-light .ap-mission-icon.ic-daily { background: rgba(236,72,153,0.1); }
 /* ── Schnellstart ── */
 .ap-qs-flightnr { font-family: var(--ap-font-mono); font-size: 0.68rem; color: var(--ap-cyan); font-weight: 600; }
 .ap-qs-booked { display: inline-flex; align-items: center; gap: 3px; font-family: var(--ap-font-mono); font-size: 0.6rem; color: var(--ap-green); font-weight: 600; }
-.ap-qs-action-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--ap-border); background: transparent; color: var(--ap-muted); font-size: 0.82rem; cursor: pointer; transition: all 0.15s; text-decoration: none; }
+.ap-qs-action-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--ap-border); background: transparent; color: var(--ap-muted); font-size: 0.82rem; cursor: pointer; transition: all 0.2s; text-decoration: none; }
 .ap-qs-action-btn:hover { color: var(--ap-text-head); border-color: var(--ap-border2); background: var(--ap-surface); }
 .ap-qs-book-btn:hover { color: var(--ap-cyan); border-color: var(--ap-cyan); }
+.ap-qs-book-btn:disabled { cursor: wait; opacity: 0.5; }
+/* Toast */
+.ap-toast { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-radius: 12px; border: 1px solid var(--ap-border); background: var(--ap-surface); backdrop-filter: blur(16px); color: var(--ap-text-head); font-family: var(--ap-font-body); font-size: 0.85rem; box-shadow: 0 8px 32px rgba(0,0,0,0.3); transform: translateX(120%); transition: transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.35s; opacity: 0; }
+.ap-toast.ap-toast-show { transform: translateX(0); opacity: 1; }
+.ap-toast-icon { font-size: 1.2rem; flex-shrink: 0; }
+.ap-toast-body { display: flex; flex-direction: column; gap: 2px; }
+.ap-toast-title { font-weight: 700; font-family: var(--ap-font-head); }
+.ap-toast-sub { font-size: 0.75rem; color: var(--ap-muted); font-family: var(--ap-font-mono); }
+.ap-toast-success { border-color: var(--ap-green); }
+.ap-toast-success .ap-toast-icon { color: var(--ap-green); }
+.ap-toast-info { border-color: var(--ap-cyan); }
+.ap-toast-info .ap-toast-icon { color: var(--ap-cyan); }
+.ap-toast-error { border-color: var(--ap-red); }
+.ap-toast-error .ap-toast-icon { color: var(--ap-red); }
 .ap-qs-logo { height: 28px; width: auto; max-width: 80px; object-fit: contain; background: #fff; border-radius: 6px; padding: 3px 8px; flex-shrink: 0; }
 .ap-qs-aptnames { font-family: var(--ap-font-body); font-size: 0.65rem; color: var(--ap-muted); margin-top: 1px; line-height: 1.3; opacity: 0.8; }
 .ap-qs-sf-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
@@ -481,7 +495,11 @@ html.ap-light .ap-mission-icon.ic-daily { background: rgba(236,72,153,0.1); }
     longest:{!! json_encode($t('duel_longest'), JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT) !!},
     totalFlights:{!! json_encode($t('flights'), JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT) !!},
     ranking:{!! json_encode($t('your_ranking'), JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT) !!},
-    airports:{!! json_encode($t('airports'), JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT) !!}
+    airports:{!! json_encode($t('airports'), JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT) !!},
+    bidFlight:{!! json_encode($t('bid_flight'), JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT) !!},
+    bidPlaced:{!! json_encode($t('bid_placed'), JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT) !!},
+    bidRemoved:{!! json_encode($t('bid_removed'), JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT) !!},
+    bidError:{!! json_encode($t('bid_error'), JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT) !!}
   };
   /* ═══ AJAX Zeitfilter ═══ */
   window.apTimeFilter=function(tf,btn){
@@ -528,13 +546,50 @@ html.ap-light .ap-mission-icon.ic-daily { background: rgba(236,72,153,0.1); }
       if(f.subfleets&&f.subfleets.length){html+='<div class="ap-qs-sf-row">';f.subfleets.forEach(function(sf){html+='<span class="ap-qs-sf-pill"><i class="ph-fill ph-airplane-tilt" style="font-size:0.5rem;"></i> '+sf+'</span>';});html+='</div>';}
       html+='<div class="d-flex justify-content-between align-items-center mt-auto pt-2"><span></span>';
       html+='<div class="d-flex gap-1">';
-      html+='<a href="'+f.url+'" class="ap-qs-action-btn ap-qs-book-btn" title="Buchen"><i class="ph-fill ph-calendar-plus"></i></a>';
+      html+='<button type="button" class="ap-qs-action-btn ap-qs-book-btn" title="'+_t.bidFlight+'" data-flight-id="'+f.id+'" onclick="apToggleBid(this)"><i class="ph-fill ph-calendar-plus"></i></button>';
       html+='<a href="'+f.url+'" class="ap-qs-action-btn" title="'+_t.viewFlight+'"><i class="ph-fill ph-eye"></i></a>';
       html+='</div></div></div></div>';
     });
     grid.innerHTML=html;
   }
   renderFlights();
+
+  /* ═══ Toast Notification ═══ */
+  function apShowToast(icon, title, sub, type, duration){
+    var el=document.createElement('div');
+    el.className='ap-toast ap-toast-'+type;
+    el.innerHTML='<span class="ap-toast-icon">'+icon+'</span><div class="ap-toast-body"><span class="ap-toast-title">'+title+'</span>'+(sub?'<span class="ap-toast-sub">'+sub+'</span>':'')+'</div>';
+    document.body.appendChild(el);
+    requestAnimationFrame(function(){requestAnimationFrame(function(){el.classList.add('ap-toast-show');});});
+    setTimeout(function(){el.classList.remove('ap-toast-show');setTimeout(function(){el.remove();},400);},duration||3500);
+  }
+
+  /* ═══ Quick Start: Bid Toggle ═══ */
+  window.apToggleBid=function(btn){
+    var fid=btn.getAttribute('data-flight-id');
+    if(!fid||btn.disabled)return;
+    btn.disabled=true;
+    fetch('{{ url("/airline-info-pulse/bid") }}/'+fid,{
+      method:'POST',
+      headers:{'X-Requested-With':'XMLHttpRequest','X-CSRF-TOKEN':csrfToken,'Content-Type':'application/json'}
+    }).then(function(r){return r.json();}).then(function(data){
+      if(data.status==='placed'){
+        btn.style.color='var(--ap-green)';btn.style.borderColor='var(--ap-green)';
+        btn.title=_t.bidPlaced;btn.innerHTML='<i class="ph-fill ph-check-circle"></i>';
+        apShowToast('✅',_t.bidPlaced, (data.flight||'')+' '+( data.route||''),'success');
+      }else if(data.status==='removed'){
+        btn.style.color='';btn.style.borderColor='';
+        btn.title=_t.bidFlight;btn.innerHTML='<i class="ph-fill ph-calendar-plus"></i>';
+        apShowToast('🗑️',_t.bidRemoved, data.route||'','info');
+      }else{
+        btn.style.color='var(--ap-red)';btn.style.borderColor='var(--ap-red)';
+        apShowToast('⚠️',_t.bidError, data.error||'','error');
+      }
+    }).catch(function(){
+      btn.style.color='var(--ap-red)';btn.style.borderColor='var(--ap-red)';
+      apShowToast('⚠️',_t.bidError,'','error');
+    }).finally(function(){btn.disabled=false;});
+  };
 
   /* ═══ Piloten-Duell ═══ */
   var myData={
@@ -545,7 +600,7 @@ html.ap-light .ap-mission-icon.ic-daily { background: rgba(236,72,153,0.1); }
     acTypes:{{ $missions['aircraft_types'] ?? 0 }},
     bestLanding:{{ $missions['best_landing'] ?? 'null' }},
     todayFlights:{{ $missions['today_flights'] ?? 0 }},
-    longestDist:{{ round(($missions['longest_flight'] ?? 0) * $units['distance_factor'], 1) }},
+    longestDist:{{ round($distVal($missions['longest_flight'] ?? 0), 1) }},
     airlinesFlown:{{ $missions['airlines_flown'] ?? 0 }},
     weekendPct:{{ $missions['weekend_pct'] ?? 0 }}
   };
@@ -600,7 +655,7 @@ html.ap-light .ap-mission-icon.ic-daily { background: rgba(236,72,153,0.1); }
       var mA=Math.abs(mvN),rA=Math.abs(rvN),total=mA+rA||1;
       var mP=Math.round((mA/total)*100),rP=100-mP;
       var mC=tie?'tie':(meWin?'win':'lose'),rC=tie?'tie':(meWin?'lose':'win');
-      bar.innerHTML='<div class="ap-duel-row"><span class="ap-duel-val '+mC+'">'+mvN+'</span><div class="ap-duel-track"><div class="ap-duel-fill-me" style="width:'+mP+'%"></div><div class="ap-duel-fill-rival" style="width:'+rP+'%"></div></div><span class="ap-duel-val '+rC+'">'+rvN+'</span></div>';
+      bar.innerHTML='<div class="ap-duel-row"><span class="ap-duel-val '+mC+'">'+(cfg.key==='bestLanding'&&mvN?'-':'')+mvN+'</span><div class="ap-duel-track"><div class="ap-duel-fill-me" style="width:'+mP+'%"></div><div class="ap-duel-fill-rival" style="width:'+rP+'%"></div></div><span class="ap-duel-val '+rC+'">'+(cfg.key==='bestLanding'&&rvN?'-':'')+rvN+'</span></div>';
       card.appendChild(bar);
     });
 
@@ -624,7 +679,9 @@ html.ap-light .ap-mission-icon.ic-daily { background: rgba(236,72,153,0.1); }
         var rCls=tie?'':(meWin?'ap-ct-lose':'ap-ct-win');
         var icon=tie?'🤝':(meWin?'✅':'❌');
         var tr=document.createElement('tr');
-        tr.innerHTML='<td style="color:var(--ap-text);font-family:var(--ap-font-head);font-weight:600;">'+cfg.label+'</td><td style="text-align:right;" class="'+mCls+'">'+mvN+'</td><td class="ap-ct-icon">'+icon+'</td><td class="'+rCls+'">'+rvN+'</td>';
+        var fmtMv=cfg.key==='bestLanding'&&mvN?'-'+mvN:mvN;
+        var fmtRv=cfg.key==='bestLanding'&&rvN?'-'+rvN:rvN;
+        tr.innerHTML='<td style="color:var(--ap-text);font-family:var(--ap-font-head);font-weight:600;">'+cfg.label+'</td><td style="text-align:right;" class="'+mCls+'">'+fmtMv+'</td><td class="ap-ct-icon">'+icon+'</td><td class="'+rCls+'">'+fmtRv+'</td>';
         tbody.appendChild(tr);
       });
     }

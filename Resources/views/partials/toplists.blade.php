@@ -138,14 +138,13 @@
                 <span class="ap-tag ap-tag-blue"><i class="ph-fill ph-airplane"></i>{{ $ac['flights'] }}</span>
                 <span class="ap-tag ap-tag-blue"><i class="ph-fill ph-clock-countdown"></i>{{ $fmtMin($ac['block_time']) }}</span>
                 @if($ac['fuel_per_nm'] > 0)
-                  @php $effVal = ($ac['fuel_per_nm'] * $units['fuel_factor']) / $units['distance_factor']; @endphp
-                  <span class="ap-tag ap-tag-amber"><i class="ph-fill ph-gas-pump"></i>{{ number_format($effVal, 2, ',', '.') }} {{ $units['efficiency_label'] }}</span>
+                  <span class="ap-tag ap-tag-amber"><i class="ph-fill ph-gas-pump"></i>{{ number_format($effVal($ac['fuel_per_nm']), 2, ',', '.') }} {{ $units['efficiency_label'] }}</span>
                 @endif
                 @if($ac['fuel_per_hour'] > 0)
-                  <span class="ap-tag ap-tag-amber"><i class="ph-fill ph-timer"></i>{{ number_format($ac['fuel_per_hour'] * $units['fuel_factor'], 0, '', '.') }} {{ $units['fuel_label'] }}/h</span>
+                  <span class="ap-tag ap-tag-amber"><i class="ph-fill ph-timer"></i>{{ number_format($fuelVal($ac['fuel_per_hour']), 0, '', '.') }} {{ $units['fuel_label'] }}/h</span>
                 @endif
                 @if($ac['co2'] > 0)
-                  <span class="ap-tag ap-tag-green"><i class="ph-fill ph-leaf"></i>{{ number_format(($ac['co2'] * $units['fuel_factor']) / 1000, 2, ',', '.') }} t CO₂</span>
+                  <span class="ap-tag ap-tag-green"><i class="ph-fill ph-leaf"></i>{{ number_format($fuelVal($ac['co2']) / 1000, 2, ',', '.') }} t CO₂</span>
                 @endif
               </div>
             </div>

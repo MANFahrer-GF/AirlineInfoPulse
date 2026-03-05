@@ -55,6 +55,10 @@ return [
     // ── Quickstart ──
     'quickstart'       => 'Quick Start',
     'view_flight'      => 'View flight',
+    'bid_flight'       => 'Place bid',
+    'bid_placed'       => 'Bid placed!',
+    'bid_removed'      => 'Bid removed',
+    'bid_error'        => 'Could not place bid',
     'loading_flights'  => 'Loading flights…',
     'region_eu'        => 'Europe',
     'region_asia'      => 'Asia',

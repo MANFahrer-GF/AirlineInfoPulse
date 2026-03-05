@@ -186,6 +186,13 @@ class AirlineInfoPulseController extends Controller
         // Unit config for views (reads phpVMS Admin settings)
         $units = $this->units;
 
+        // Native phpVMS Unit formatters (with manual fallback)
+        $fmtDist = fn(float $nm, int $dec = 0) => PulseHelper::formatDistance($nm, $dec, $this->units);
+        $fmtFuel = fn(float $lbs, int $dec = 0) => PulseHelper::formatFuel($lbs, $dec, $this->units);
+        $distVal = fn(float $nm) => PulseHelper::distanceValue($nm, $this->units);
+        $fuelVal = fn(float $lbs) => PulseHelper::fuelValue($lbs, $this->units);
+        $effVal  = fn(float $lbsPerNm) => PulseHelper::convertEfficiency($lbsPerNm, $this->units);
+
         return view('airlineinfopulse::index', compact(
             'filter', 'customStart', 'customEnd', 'pilotSort', 'acSort',
             'showAllPilots', 'showAllAc',
@@ -196,7 +203,8 @@ class AirlineInfoPulseController extends Controller
             'topAircraft', 'topAircraftAll', 'acExtras',
             'quickstartJson',
             'feed', 'snapshot', 'prevSnapshot',
-            'user', 'shortName', 'units'
+            'user', 'shortName', 'units',
+            'fmtDist', 'fmtFuel', 'distVal', 'fuelVal', 'effVal'
         ));
     }
 
@@ -219,6 +227,64 @@ class AirlineInfoPulseController extends Controller
         ];
 
         return view('airlineinfopulse::guide', compact('units', 'guideConfig'));
+    }
+
+    /**
+     * AJAX: Bid auf einen Flug setzen/entfernen (Toggle)
+     */
+    public function toggleBid(string $flight_id)
+    {
+        $user = auth()->user();
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        try {
+            $bidClass    = 'App\Models\Bid';
+            $flightClass = 'App\Models\Flight';
+            $svcClass    = 'App\Services\BidService';
+
+            if (!class_exists($bidClass) || !class_exists($flightClass)) {
+                return response()->json(['error' => 'Bid system not available'], 500);
+            }
+
+            $existing = $bidClass::where('user_id', $user->id)
+                ->where('flight_id', $flight_id)
+                ->first();
+
+            if ($existing) {
+                $flight = $flightClass::find($flight_id);
+                if ($flight) {
+                    $bidSvc = app($svcClass);
+                    $bidSvc->removeBid($flight, $user);
+                }
+                return response()->json(['status' => 'removed']);
+            }
+
+            $flight = $flightClass::find($flight_id);
+            if (!$flight) {
+                return response()->json(['error' => 'Flight not found'], 404);
+            }
+
+            $bidSvc = app($svcClass);
+            $bidSvc->addBid($flight, $user);
+
+            // Flug-Info für Toast zurückgeben
+            $fltNr = '';
+            if (isset($flight->airline)) {
+                $fltNr = ($flight->airline->icao ?? '') . ' ' . ($flight->flight_number ?? '');
+            } else {
+                $fltNr = $flight->flight_number ?? '';
+            }
+
+            return response()->json([
+                'status' => 'placed',
+                'flight' => trim($fltNr),
+                'route'  => ($flight->dpt_airport_id ?? '') . ' → ' . ($flight->arr_airport_id ?? ''),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
     }
 
     /**
@@ -295,7 +361,7 @@ class AirlineInfoPulseController extends Controller
             'acTypes'        => $lt ? (int) $lt->ac_types : 0,
             'bestLanding'    => $lt ? $lt->best_ldg : null,
             'todayFlights'   => $todayFlights,
-            'longestDist'    => $lt ? round((float) ($lt->max_dist ?? 0) * $this->units['distance_factor'], 1) : 0,
+            'longestDist'    => $lt ? round(PulseHelper::distanceValue((float) ($lt->max_dist ?? 0), $this->units), 1) : 0,
             'airlinesFlown'  => $lt ? (int) $lt->airlines_flown : 0,
             'weekendFlights' => $weekend,
             'weekendPct'     => $flights > 0 ? round(($weekend / $flights) * 100) : 0,
@@ -789,7 +855,7 @@ class AirlineInfoPulseController extends Controller
                 'airIcao'  => e($airIcao),
                 'logo'     => $logo,
                 'time'     => isset($f->flight_time) ? $fmtMin((int) $f->flight_time) : null,
-                'dist'     => isset($f->distance) ? number_format((float)$f->distance, 0, '', ' ') . ' NM' : null,
+                'dist'     => isset($f->distance) ? PulseHelper::formatDistance((float)$f->distance, 0, $this->units) : null,
                 'url'      => url('/flights/' . $f->id),
                 'subfleets' => array_map('e', $subfleets),
             ];
@@ -895,12 +961,15 @@ class AirlineInfoPulseController extends Controller
                 $mxSelect[] = 'subfleets.'.$sfTypeCol.' as sf_type';
             }
 
-            // Filtern: last_note nicht leer UND updated_at im Zeitraum
+            // Filtern: last_note nicht leer UND Timestamp im Zeitraum
+            // Wichtig: Filter muss dieselbe Spalte nutzen wie die Anzeige ($tsCol),
+            // sonst erscheinen alte Checks im Feed wenn DisposableSpecial updated_at ändert
+            $filterCol = $mxTbl.'.'.$tsCol;
             $mxQ = DB::table($mxTbl)
                 ->whereNotNull($mxTbl.'.last_note')
                 ->where($mxTbl.'.last_note', '!=', '')
-                ->whereBetween($mxTbl.'.updated_at', [$range['start'], $range['end']])
-                ->orderByDesc($mxTbl.'.updated_at')
+                ->whereBetween($filterCol, [$range['start'], $range['end']])
+                ->orderByDesc($filterCol)
                 ->limit($limit);
 
             if ($this->schemaHasTable('aircraft')) {

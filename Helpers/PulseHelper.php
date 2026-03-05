@@ -113,8 +113,95 @@ class PulseHelper
     public static function convertEfficiency(float $lbsPerNm, array $units): float
     {
         if ($lbsPerNm == 0) return 0;
-        // (lbs * fuelFactor) / (NM * distFactor) = display_fuel / display_dist
         return ($lbsPerNm * $units['fuel_factor']) / $units['distance_factor'];
+    }
+
+    /**
+     * Format distance using phpVMS native Unit class (if available).
+     * Falls back to manual conversion if phpVMS classes are missing.
+     *
+     * @param float  $valueNm  Distance in nautical miles (DB internal unit)
+     * @param int    $decimals Number of decimal places
+     * @param array  $units    Units array from getUnits()
+     * @return string Formatted string, e.g. "1.451 NM" or "2.687 km"
+     */
+    public static function formatDistance(float $valueNm, int $decimals, array $units): string
+    {
+        // Try phpVMS native Distance class — most reliable, respects admin settings
+        if (class_exists('App\Support\Units\Distance')) {
+            try {
+                $dist = new \App\Support\Units\Distance($valueNm, 'nmi');
+                $local = $dist->local($decimals);
+                if ($local !== null && $local !== '') {
+                    return (string) $local;
+                }
+            } catch (\Throwable $e) {
+                // Fall through to manual
+            }
+        }
+
+        // Fallback: manual conversion
+        $converted = $valueNm * $units['distance_factor'];
+        return number_format($converted, $decimals, ',', ' ') . ' ' . $units['distance_label'];
+    }
+
+    /**
+     * Format fuel/weight using phpVMS native Unit class (if available).
+     *
+     * @param float  $valueLbs Fuel in pounds (DB internal unit)
+     * @param int    $decimals Number of decimal places
+     * @param array  $units    Units array from getUnits()
+     * @return string Formatted string, e.g. "3.543 kg" or "7.813 lbs"
+     */
+    public static function formatFuel(float $valueLbs, int $decimals, array $units): string
+    {
+        if (class_exists('App\Support\Units\Fuel')) {
+            try {
+                $fuel = new \App\Support\Units\Fuel($valueLbs, 'lbs');
+                $local = $fuel->local($decimals);
+                if ($local !== null && $local !== '') {
+                    return (string) $local;
+                }
+            } catch (\Throwable $e) {
+                // Fall through
+            }
+        }
+
+        $converted = $valueLbs * $units['fuel_factor'];
+        return number_format($converted, $decimals, ',', ' ') . ' ' . $units['fuel_label'];
+    }
+
+    /**
+     * Get only the numeric value of a distance in local units (for calculations in views).
+     */
+    public static function distanceValue(float $valueNm, array $units): float
+    {
+        if (class_exists('App\Support\Units\Distance')) {
+            try {
+                $dist = new \App\Support\Units\Distance($valueNm, 'nmi');
+                // toUnit returns a float in the target unit
+                $targetUnit = match ($units['distance_unit']) {
+                    'km' => 'km', 'mi' => 'mi', default => 'nmi',
+                };
+                return round($dist->toUnit($targetUnit), 2);
+            } catch (\Throwable $e) {}
+        }
+        return $valueNm * $units['distance_factor'];
+    }
+
+    /**
+     * Get only the numeric value of fuel in local units (for calculations in views).
+     */
+    public static function fuelValue(float $valueLbs, array $units): float
+    {
+        if (class_exists('App\Support\Units\Fuel')) {
+            try {
+                $fuel = new \App\Support\Units\Fuel($valueLbs, 'lbs');
+                $targetUnit = $units['fuel_unit'] === 'lbs' ? 'lbs' : 'kg';
+                return round($fuel->toUnit($targetUnit), 2);
+            } catch (\Throwable $e) {}
+        }
+        return $valueLbs * $units['fuel_factor'];
     }
 
     /**
