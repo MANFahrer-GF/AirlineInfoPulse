@@ -169,23 +169,10 @@ class AirlineInfoPulseController extends Controller
         $acLimit     = $showAllAc ? 12 : 5;
         $topAircraft = array_slice($topAircraftAll, 0, $acLimit);
 
-        // Cleanup stale BIDs: remove bids for flights where the user already has an accepted PIREP.
-        // phpVMS does not automatically remove BIDs when a PIREP is manually filed + confirmed by admin
-        // (or when filed via SmartCARS/TDFI). We do it here so the ActiveBookings widget shows correctly.
-        if ($user && $this->schemaHasTable('bids') && $this->schemaHasTable('pireps')) {
-            $staleBidFlightIds = DB::table('pireps')
-                ->where('user_id', $user->id)
-                ->where('state', PirepState::ACCEPTED)
-                ->whereNotNull('flight_id')
-                ->pluck('flight_id')
-                ->toArray();
-            if (!empty($staleBidFlightIds)) {
-                DB::table('bids')
-                    ->where('user_id', $user->id)
-                    ->whereIn('flight_id', $staleBidFlightIds)
-                    ->delete();
-            }
-        }
+        // Stale-bid cleanup is now event-driven via PirepObserver — see
+        // Providers/AirlineInfoPulseServiceProvider::registerObservers().
+        // Page rendering must stay side-effect-free so it cannot delete
+        // a pilot's freshly-placed bid on a reused flight slot.
 
         // Quickstart + Flights JSON
         $quickstart     = $this->getQuickstart();

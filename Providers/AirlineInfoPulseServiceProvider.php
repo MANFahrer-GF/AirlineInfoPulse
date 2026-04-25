@@ -3,6 +3,8 @@
 namespace Modules\AirlineInfoPulse\Providers;
 
 use App\Contracts\Modules\ServiceProvider;
+use App\Models\Pirep;
+use Modules\AirlineInfoPulse\Observers\PirepObserver;
 
 class AirlineInfoPulseServiceProvider extends ServiceProvider
 {
@@ -19,6 +21,7 @@ class AirlineInfoPulseServiceProvider extends ServiceProvider
         $this->registerViews();
         $this->registerTranslations();
         $this->registerRoutes();
+        $this->registerObservers();
     }
 
     /**
@@ -30,6 +33,18 @@ class AirlineInfoPulseServiceProvider extends ServiceProvider
             __DIR__ . '/../Config/config.php',
             'airlineinfopulse'
         );
+    }
+
+    /**
+     * Register Eloquent observers.
+     *
+     * Stale-bid cleanup runs on the PIREP ACCEPTED transition (event-driven),
+     * not on every page load — that earlier approach killed fresh bids on
+     * reused flight slots. See PirepObserver for the time-aware logic.
+     */
+    protected function registerObservers(): void
+    {
+        Pirep::observe(PirepObserver::class);
     }
 
     /**
