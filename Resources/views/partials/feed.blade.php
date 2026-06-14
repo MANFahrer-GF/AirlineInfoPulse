@@ -112,6 +112,33 @@
             </div>
           </div>
         </div>
+
+      {{-- ── AWARD EVENT ── --}}
+      @elseif($e['type'] === 'award')
+        @php $ad = $e['data']; @endphp
+        <div class="ap-feed-item">
+          <div class="d-flex justify-content-between align-items-start gap-2">
+            <div class="d-flex align-items-center gap-2" style="flex:1;min-width:0;">
+              @if(!empty($ad['award_image']))
+                <img src="{{ $ad['award_image'] }}" alt="" style="width:30px;height:30px;object-fit:contain;flex-shrink:0;">
+              @else
+                <i class="ph-fill ph-trophy" style="color:var(--ap-amber);font-size:1.35rem;flex-shrink:0;"></i>
+              @endif
+              <div style="min-width:0;">
+                <div style="font-size:0.68rem;color:var(--ap-amber);margin-bottom:2px;">
+                  <i class="ph-fill ph-medal me-1"></i>{{ $t('award_received') }}
+                </div>
+                <div style="font-family:var(--ap-font-head);font-weight:700;font-size:0.82rem;color:var(--ap-text-head);line-height:1.2;">{{ $ad['award_name'] }}</div>
+                <div style="font-size:0.72rem;color:var(--ap-muted);margin-top:1px;">
+                  <a href="{{ $mkPilotUrl($ad['pilot_id'] ?? 0) }}" style="color:var(--ap-text);text-decoration:none;">{{ $ad['pilot_name'] ?? 'Pilot' }}</a>
+                </div>
+              </div>
+            </div>
+            <div class="d-flex flex-column align-items-end gap-1" style="flex-shrink:0;">
+              <div class="ap-feed-time">{{ $e['ts']->format('d.m. H:i') }}</div>
+            </div>
+          </div>
+        </div>
       @endif
 
     @empty

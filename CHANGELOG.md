@@ -2,6 +2,39 @@
 
 All notable changes to AirlineInfoPulse are documented here.
 
+## [1.3.0] — 2026-06-14
+
+### Added — Awards in the Activity Feed
+
+The activity feed ("What happened" / *Was ist passiert*) now surfaces
+**awards as they are granted**. Whenever phpVMS hands a pilot an award, a
+new `award` event appears in the feed — the award image (with a 🏆 trophy
+fallback when none is set), the award name, the receiving pilot (name
+GDPR-shortened and linked to their profile) and the grant timestamp —
+interleaved chronologically with PIREP, new-pilot and maintenance events,
+and bounded by the same per-time-range limit as the rest of the feed.
+
+This is **display-only**: it reflects awards that were *actually* granted
+through phpVMS. There is no leaderboard and no ranking.
+
+- **`Http/Controllers/AirlineInfoPulseController.php`** — `getFeed()` now
+  reads `user_awards ⋈ awards` for the selected date range
+  (`user_awards.created_at` = grant time), schema-guarded like the
+  maintenance source, with the pilot name passed through
+  `PulseHelper::shortName()`.
+- **`Resources/views/partials/feed.blade.php`** — New `award` event block,
+  styled to match the existing "new pilot" event.
+- **`Resources/lang/*/pulse.php`** — New `award_received` key in all nine
+  languages (de, en, es, fr, it, ja, pt-br, pt-pt, tr).
+
+### Migration notes
+
+No database migration required — uses the core phpVMS `awards` /
+`user_awards` tables. If no awards were granted in the selected period the
+feed simply shows none.
+
+---
+
 ## [1.2.4] — 2026-04-25
 
 ### 🚨 Critical Bugfix — Bid Killer

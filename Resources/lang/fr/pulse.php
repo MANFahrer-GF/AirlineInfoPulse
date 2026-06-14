@@ -40,6 +40,7 @@ return [
     'view_profile'     => 'Profil →',
     'new_pilot'        => 'Nouveau pilote',
     'maintenance'      => 'Maintenance',
+    'award_received'   => 'Récompense obtenue',
     'no_events'        => 'Aucun événement dans cette période.',
     'no_flights_region'=> 'Aucun vol pour cette région.',
 

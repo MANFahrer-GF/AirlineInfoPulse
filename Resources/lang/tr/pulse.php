@@ -40,6 +40,7 @@ return [
     'view_profile'     => 'Profil →',
     'new_pilot'        => 'Yeni Pilot',
     'maintenance'      => 'Bakım',
+    'award_received'   => 'Ödül kazanıldı',
     'no_events'        => 'Bu dönemde etkinlik yok.',
     'no_flights_region'=> 'Bu bölge için uçuş yok.',
 

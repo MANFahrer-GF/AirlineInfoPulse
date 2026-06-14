@@ -1040,6 +1040,57 @@ class AirlineInfoPulseController extends Controller
             }
         }
 
+        // Awards — verliehene Auszeichnungen im Zeitraum (user_awards + awards)
+        // created_at auf der Pivot-Zeile = Vergabezeitpunkt
+        if ($this->schemaHasTable('user_awards')
+            && $this->schemaHasColumn('user_awards', 'created_at')
+            && $this->schemaHasTable('awards')) {
+
+            $awSelect = [
+                'user_awards.id',
+                'user_awards.user_id',
+                'user_awards.award_id',
+                'user_awards.created_at as aw_ts',
+                'awards.name as award_name',
+            ];
+            if ($this->schemaHasColumn('awards', 'image_url')) {
+                $awSelect[] = 'awards.image_url as award_image';
+            }
+
+            $awRows = DB::table('user_awards')
+                ->leftJoin('awards', 'user_awards.award_id', '=', 'awards.id')
+                ->whereBetween('user_awards.created_at', [$range['start'], $range['end']])
+                ->orderByDesc('user_awards.created_at')
+                ->limit($limit)
+                ->select($awSelect)
+                ->get();
+
+            $awUserIds = $awRows->pluck('user_id')->filter()->unique()->toArray();
+            $awUsers = !empty($awUserIds) ? User::whereIn('id', $awUserIds)->get()->keyBy('id') : collect();
+
+            foreach ($awRows as $aw) {
+                if (empty($aw->aw_ts) || empty($aw->award_name)) continue; // gelöschtes Award / fehlender TS
+
+                $u = $awUsers->get($aw->user_id);
+                $img = $aw->award_image ?? null;
+                if (!empty($img) && !str_starts_with($img, 'http')) {
+                    $img = url($img);
+                }
+
+                $feed->push([
+                    'ts'   => Carbon::parse($aw->aw_ts),
+                    'type' => 'award',
+                    'data' => [
+                        'id'          => $aw->id,
+                        'pilot_name'  => PulseHelper::shortName($u->name ?? null),
+                        'pilot_id'    => $aw->user_id,
+                        'award_name'  => (string) $aw->award_name,
+                        'award_image' => $img,
+                    ],
+                ]);
+            }
+        }
+
         return $feed->sortByDesc('ts')->values()->toArray();
     }
 
