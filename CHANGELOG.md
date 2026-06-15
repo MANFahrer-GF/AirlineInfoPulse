@@ -2,6 +2,11 @@
 
 All notable changes to AirlineInfoPulse are documented here.
 
+## [1.3.1] — 2026-06-15
+
+### Fixed
+- **View path registration now only registers existing directories.** `registerViews()` appended `/modules/airlineinfopulse` to every `view.paths` entry (theme-override paths) which usually don't exist. Live rendering was never affected — the view finder skips missing dirs lazily and falls back to `Resources/views` — but `php artisan view:cache` / `optimize` eager-scans every registered path via the Symfony Finder and threw `DirectoryNotFoundException`. Now wrapped in `array_filter(…, 'is_dir')`; `Resources/views` always exists so the namespace keeps at least one valid path, and existing theme overrides are still picked up.
+
 ## [1.3.0] — 2026-06-14
 
 ### Added — Awards in the Activity Feed

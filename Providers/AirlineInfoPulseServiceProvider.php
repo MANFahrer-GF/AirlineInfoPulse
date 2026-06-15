@@ -59,12 +59,18 @@ class AirlineInfoPulseServiceProvider extends ServiceProvider
             $sourcePath => $viewPath,
         ], 'views');
 
-        $this->loadViewsFrom(array_merge(
+        // Nur EXISTIERENDE Verzeichnisse registrieren. Die Theme-Override-
+        // Pfade (view.paths + /modules/airlineinfopulse) existieren i.d.R.
+        // nicht. Live-Rendern überspringt fehlende Dirs lazy (Fallback
+        // $sourcePath), aber `php artisan view:cache`/`optimize` scannt EAGER
+        // jeden Pfad per Symfony-Finder → DirectoryNotFoundException.
+        // $sourcePath existiert immer → Namespace behält stets einen Pfad.
+        $this->loadViewsFrom(array_filter(array_merge(
             array_map(function ($path) {
                 return $path . '/modules/airlineinfopulse';
             }, \Config::get('view.paths')),
             [$sourcePath]
-        ), 'airlineinfopulse');
+        ), 'is_dir'), 'airlineinfopulse');
     }
 
     /**
