@@ -2,6 +2,11 @@
 
 All notable changes to AirlineInfoPulse are documented here.
 
+## [1.4.2] — 2026-06-16
+
+### Changed
+- **Wartungs-Kachel zeigt das volle Board** (gleiche Infos wie auf der Überführungs-/Flottenseite): Flugzeug, Airline, Phase, Werft/Route, Restzeit + Pilot auf Live-Beinen — statt der kompakten Kurzliste.
+
 ## [1.4.1] — 2026-06-16
 
 ### Changed

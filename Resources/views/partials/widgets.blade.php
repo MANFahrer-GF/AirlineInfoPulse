@@ -17,7 +17,9 @@
     </div>
   </div>
   <div style="padding:14px 16px;">
-    @include('skyadventures::widgets.maintenance', ['compact' => true, 'bare' => true])
+    {{-- Volles Board (gleiche Infos wie auf der Überführungs-/Flottenseite): Flugzeug,
+         Airline, Phase, Werft/Route, Restzeit + Pilot auf Live-Beinen. --}}
+    @include('skyadventures::widgets.maintenance', ['bare' => true])
   </div>
 </div>
 @endif
