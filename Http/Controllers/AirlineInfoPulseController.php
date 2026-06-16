@@ -1091,6 +1091,56 @@ class AirlineInfoPulseController extends Controller
             }
         }
 
+        // SkyAdventures-Wartungs-Meilensteine (Fly-to-Werft-Ablauf): „Wartung" beim Start
+        // + „zurück im Dienst" beim Abschluss. Nutzt denselben Feed-Typ 'maintenance';
+        // die Labels kommen aus den SkyAdventures-Übersetzungen. Nur wenn das Modul
+        // installiert ist (Tabelle vorhanden) — sonst still übersprungen.
+        if ($this->schemaHasTable('sa_maintenance_orders')) {
+            $moRows = DB::table('sa_maintenance_orders as o')
+                ->leftJoin('aircraft', 'aircraft.id', '=', 'o.aircraft_id')
+                ->where(function ($q) use ($range) {
+                    $q->whereBetween('o.started_at', [$range['start'], $range['end']])
+                        ->orWhereBetween('o.finished_at', [$range['start'], $range['end']]);
+                })
+                ->orderByDesc('o.id')
+                ->limit($limit)
+                ->get([
+                    'o.id', 'o.status', 'o.registration', 'o.started_at', 'o.finished_at',
+                    'aircraft.icao as ac_icao', 'aircraft.registration as ac_reg',
+                ]);
+
+            foreach ($moRows as $mo) {
+                $reg  = (string) ($mo->registration ?: ($mo->ac_reg ?? ''));
+                $icao = (string) ($mo->ac_icao ?? '');
+
+                if (!empty($mo->started_at)
+                    && Carbon::parse($mo->started_at)->between($range['start'], $range['end'])) {
+                    $feed->push([
+                        'ts'   => Carbon::parse($mo->started_at),
+                        'type' => 'maintenance',
+                        'data' => [
+                            'mx_type' => __('skyadventures::ferry.kind_maintenance'),
+                            'ac_icao' => $icao,
+                            'ac_reg'  => $reg,
+                        ],
+                    ]);
+                }
+
+                if ($mo->status === 'done' && !empty($mo->finished_at)
+                    && Carbon::parse($mo->finished_at)->between($range['start'], $range['end'])) {
+                    $feed->push([
+                        'ts'   => Carbon::parse($mo->finished_at),
+                        'type' => 'maintenance',
+                        'data' => [
+                            'mx_type' => __('skyadventures::ferry.hist_t_done'),
+                            'ac_icao' => $icao,
+                            'ac_reg'  => $reg,
+                        ],
+                    ]);
+                }
+            }
+        }
+
         return $feed->sortByDesc('ts')->values()->toArray();
     }
 

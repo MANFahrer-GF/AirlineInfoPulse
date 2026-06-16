@@ -2,6 +2,12 @@
 
 All notable changes to AirlineInfoPulse are documented here.
 
+## [1.4.0] — 2026-06-16
+
+### Added — SkyAdventures-Wartung im Dashboard
+- **Wartungs-Kachel** (`partials/widgets.blade.php`): bindet das wiederverwendbare SkyAdventures-Wartungs-Widget (`skyadventures::widgets.maintenance`, kompakt) ein — zeigt live, welche Maschinen gerade im Wartungs-/Überführungs-Ablauf sind. Nur wenn SkyAdventures installiert ist (`view()->exists`-Guard); das Widget blendet sich selbst aus, wenn die Flotte aus ist oder nichts läuft.
+- **Wartungs-Meilensteine im „Was ist passiert"-Feed** (`getFeed()`): SkyAdventures-Order-Ereignisse (Wartung gestartet · zurück im Dienst) erscheinen als `type=maintenance`-Einträge mit Flugzeug-Kennung. Read-only, aus `sa_maintenance_orders`, nur wenn die Tabelle existiert. Labels aus den SkyAdventures-Übersetzungen.
+
 ## [1.3.1] — 2026-06-15
 
 ### Fixed
