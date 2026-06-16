@@ -2,6 +2,11 @@
 
 All notable changes to AirlineInfoPulse are documented here.
 
+## [1.4.1] — 2026-06-16
+
+### Changed
+- **Wartungs-Kachel im Glas-Design.** Die SkyAdventures-Wartungs-Kachel sitzt jetzt in einer echten `.ap-glass`-Karte mit Header (Schraubenschlüssel + Titel) und bindet das Widget im neuen `bare`-Modus ein (nur Inhalt). Vorher hatte das Widget seine eigene helle Box, die im Dark-Dashboard nicht zum Design passte; jetzt sieht die Kachel aus wie die übrigen (Aktive Buchungen, Feed …).
+
 ## [1.4.0] — 2026-06-16
 
 ### Added — SkyAdventures-Wartung im Dashboard
