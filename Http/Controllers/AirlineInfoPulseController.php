@@ -1106,12 +1106,22 @@ class AirlineInfoPulseController extends Controller
                 ->limit($limit)
                 ->get([
                     'o.id', 'o.status', 'o.registration', 'o.started_at', 'o.finished_at',
+                    'o.check_type', 'o.reason',
                     'aircraft.icao as ac_icao', 'aircraft.registration as ac_reg',
                 ]);
+
+            // Beschriftung + Schwere kommen aus SkyAdventures, damit ein Schadens-Stopp
+            // nicht als „Wartung (Werft)" durchgeht: der Pilot soll lesen, WAS passiert ist
+            // (harte Landung, Tail Strike …) — und Schaden gehört rot, nicht cyan.
+            $hasLabel = class_exists(\Modules\SkyAdventures\Support\CheckLabel::class);
 
             foreach ($moRows as $mo) {
                 $reg  = (string) ($mo->registration ?: ($mo->ac_reg ?? ''));
                 $icao = (string) ($mo->ac_icao ?? '');
+
+                [$label, $sev] = $hasLabel
+                    ? \Modules\SkyAdventures\Support\CheckLabel::for($mo->check_type ?? null, $mo->reason ?? null)
+                    : [__('skyadventures::ferry.kind_maintenance'), 'cyan'];
 
                 if (!empty($mo->started_at)
                     && Carbon::parse($mo->started_at)->between($range['start'], $range['end'])) {
@@ -1119,7 +1129,8 @@ class AirlineInfoPulseController extends Controller
                         'ts'   => Carbon::parse($mo->started_at),
                         'type' => 'maintenance',
                         'data' => [
-                            'mx_type' => __('skyadventures::ferry.kind_maintenance'),
+                            'mx_type' => $label,
+                            'mx_sev'  => $sev,
                             'ac_icao' => $icao,
                             'ac_reg'  => $reg,
                         ],
@@ -1132,7 +1143,8 @@ class AirlineInfoPulseController extends Controller
                         'ts'   => Carbon::parse($mo->finished_at),
                         'type' => 'maintenance',
                         'data' => [
-                            'mx_type' => __('skyadventures::ferry.hist_t_done'),
+                            'mx_type' => $label . ' – ' . __('skyadventures::ferry.hist_t_done'),
+                            'mx_sev'  => 'green',
                             'ac_icao' => $icao,
                             'ac_reg'  => $reg,
                         ],

@@ -80,17 +80,16 @@
         @php
           $md = $e['data'];
           $mxLabel = $md['mx_type'] ?: $t('maintenance');
-          $mxLower = strtolower($mxLabel);
-          if (str_contains($mxLower, 'hard')) {
-              $mxColor = 'var(--ap-red)';
-              $mxTagClass = 'ap-tag-red';
-          } elseif (str_contains($mxLower, 'soft') || str_contains($mxLower, 'inspect')) {
-              $mxColor = 'var(--ap-amber)';
-              $mxTagClass = 'ap-tag-amber';
-          } else {
-              $mxColor = 'var(--ap-cyan)';
-              $mxTagClass = 'ap-tag-cyan';
+          // Schwere kommt jetzt explizit mit (SkyAdventures liefert sie). Der alte
+          // Wortfund-Heuristik bleibt als Rückfall — sie bricht, sobald jemand übersetzt.
+          $mxSev = $md['mx_sev'] ?? null;
+          if ($mxSev === null) {
+              $mxLower = strtolower($mxLabel);
+              $mxSev = str_contains($mxLower, 'hard') ? 'red'
+                  : ((str_contains($mxLower, 'soft') || str_contains($mxLower, 'inspect')) ? 'amber' : 'cyan');
           }
+          $mxColor = 'var(--ap-' . $mxSev . ')';
+          $mxTagClass = 'ap-tag-' . $mxSev;
         @endphp
         <div class="ap-feed-item">
           <div class="d-flex justify-content-between align-items-start gap-2">
