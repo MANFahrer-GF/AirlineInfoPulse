@@ -14,3 +14,9 @@ node_modules/
 
 # Cache
 *.cache
+
+# Gebautes Auslieferungsmaterial (Install-ZIPs). Gehoert an das
+# GitHub-Release, nicht in die Versionsverwaltung — unverfolgt meldet
+# `git status` es sonst dauerhaft, und echte Aenderungen gehen im
+# Rauschen unter.
+/dist/
