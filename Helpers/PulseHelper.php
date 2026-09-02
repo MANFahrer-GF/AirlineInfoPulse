@@ -3,6 +3,8 @@
 namespace Modules\AirlineInfoPulse\Helpers;
 
 use Carbon\Carbon;
+use DateTimeZone;
+use Illuminate\Support\Facades\Auth;
 use Carbon\CarbonPeriod;
 
 class PulseHelper
@@ -234,9 +236,46 @@ class PulseHelper
     /**
      * Zeitraum-Definitionen basierend auf dem Filter
      */
+    /**
+     * Zeitzone des Betrachters: was im Pilotenprofil steht, sonst die App-Zeitzone.
+     *
+     * Die Seite rechnete und zeigte bis 02.09.2026 durchgehend in UTC. Für eine deutsche
+     * VA hieß das: jede Uhrzeit zwei Stunden zu früh, und „heute" war der UTC-Tag — ein
+     * Flug um 00:30 Ortszeit tauchte im Tagesverlauf erst gar nicht auf, sondern zählte
+     * zum Vortag. Gemeldet als „die Zeiten verwirren alle".
+     */
+    public static function viewerTimezone(): string
+    {
+        $tz = null;
+
+        try {
+            $user = Auth::user();
+            $tz   = $user->timezone ?? null;
+        } catch (\Throwable) {
+            $tz = null;   // kein Auth-Kontext (Konsole/Cron)
+        }
+
+        $tz = is_string($tz) ? trim($tz) : '';
+        if ($tz !== '' && in_array($tz, timezone_identifiers_list(DateTimeZone::ALL_WITH_BC), true)) {
+            return $tz;
+        }
+
+        return (string) (config('app.timezone') ?: 'UTC');
+    }
+
+    /**
+     * Zeitraum-Grenzen. Gerechnet wird in der Zeitzone des Betrachters (damit „heute"
+     * SEIN heute ist), zurückgegeben wird in UTC: die Datenbank-Spalten sind UTC, und ein
+     * an eine Abfrage gebundenes Carbon wird in seiner eigenen Zone serialisiert — mit
+     * lokalen Grenzen läge der Vergleich also um den Zonenversatz daneben.
+     *
+     * `start_local`/`end_local` sind dieselben Momente für die Anzeige, `tz` die verwendete
+     * Zone (für Beschriftungen).
+     */
     public static function getDateRange(string $filter, ?string $customStart = null, ?string $customEnd = null): array
     {
-        $now = Carbon::now();
+        $tz  = self::viewerTimezone();
+        $now = Carbon::now($tz);
 
         switch ($filter) {
             case 'today':
@@ -271,8 +310,8 @@ class PulseHelper
 
             case 'custom':
                 try {
-                    $start = $customStart ? Carbon::parse($customStart)->startOfDay() : $now->copy()->startOfMonth();
-                    $end   = $customEnd ? Carbon::parse($customEnd)->endOfDay() : $now->copy()->endOfDay();
+                    $start = $customStart ? Carbon::parse($customStart, $tz)->startOfDay() : $now->copy()->startOfMonth();
+                    $end   = $customEnd ? Carbon::parse($customEnd, $tz)->endOfDay() : $now->copy()->endOfDay();
                     // Max 366 Tage Range erlauben (Schutz gegen Mega-Queries)
                     if ($start->diffInDays($end) > 366) {
                         $start = $end->copy()->subDays(366)->startOfDay();
@@ -293,7 +332,13 @@ class PulseHelper
                 break;
         }
 
-        return ['start' => $start, 'end' => $end];
+        return [
+            'start'       => $start->copy()->setTimezone('UTC'),
+            'end'         => $end->copy()->setTimezone('UTC'),
+            'start_local' => $start,
+            'end_local'   => $end,
+            'tz'          => $tz,
+        ];
     }
 
     /**
@@ -301,11 +346,16 @@ class PulseHelper
      */
     public static function getPreviousPeriod(Carbon $start, Carbon $end): array
     {
+        // In der Zone der übergebenen Grenzen rechnen und in UTC zurückgeben: sonst
+        // entsteht zwischen einem lokal gerechneten „heute" und einem in UTC gerechneten
+        // „gestern" genau der Zonenversatz als Lücke — die KPI-Vergleiche verglichen dann
+        // 24 Stunden mit 22 oder 26. Aufrufer übergibt die LOKALEN Grenzen.
         $diffDays = $start->diffInDays($end) + 1;
+        $prevEnd  = $start->copy()->subDay()->endOfDay();
 
         return [
-            'start' => $start->copy()->subDays($diffDays),
-            'end'   => $start->copy()->subDay()->endOfDay(),
+            'start' => $start->copy()->subDays($diffDays)->setTimezone('UTC'),
+            'end'   => $prevEnd->setTimezone('UTC'),
         ];
     }
 

@@ -2,6 +2,30 @@
 
 All notable changes to AirlineInfoPulse are documented here.
 
+## [1.5.0] — 2026-09-02
+
+### Changed
+
+- **All times are now shown in the viewer's timezone instead of UTC.** The page computed
+  and displayed everything in UTC: for a German VA every timestamp was two hours early,
+  and "today" was the *UTC* day — an event at 00:30 local time did not show up in today's
+  feed at all, it counted towards yesterday. The timezone comes from the pilot's profile
+  (`users.timezone`), falling back to `config('app.timezone')`.
+  `PulseHelper::getDateRange()` now computes the range in that zone and returns the
+  boundaries in UTC for the queries, plus `start_local`/`end_local`/`tz` for display —
+  a Carbon bound to a query is serialised in its own zone, so local boundaries would have
+  been off by exactly the offset. The comparison period is computed in the same zone, so
+  "today" and "yesterday" no longer overlap by the offset.
+- The feed header now names the timezone (e.g. `· CEST`), so no timestamp is ambiguous.
+
+### Fixed
+
+- **The same maintenance event was reported twice.** Where SkyAdventures manages an
+  aircraft's maintenance, DisposableBasic's `last_note` entry is a second voice for the
+  same event — once translated and coloured ("Hard landing", red), once as DisposableBasic's
+  raw note text ("Hard Landing Check") with no severity. The DisposableBasic entry is now
+  skipped for aircraft that have a SkyAdventures order in the same period.
+
 ## [1.4.4] — 2026-09-02
 
 ### Fixed

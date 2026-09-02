@@ -136,7 +136,7 @@ class AirlineInfoPulseController extends Controller
         $user        = Auth::user();
 
         $range     = PulseHelper::getDateRange($filter, $customStart, $customEnd);
-        $prevRange = PulseHelper::getPreviousPeriod($range['start'], $range['end']);
+        $prevRange = PulseHelper::getPreviousPeriod($range['start_local'], $range['end_local']);
 
         // KPIs
         $kpis      = $this->getKpis($range);
@@ -672,7 +672,7 @@ class AirlineInfoPulseController extends Controller
             $extras[$uid] = [
                 'top_routes' => $allRoutes->get($uid, collect()),
                 'recent'     => $recentAll->get($uid, collect()),
-                'last_ts'    => isset($lastTs[$uid]) ? Carbon::parse($lastTs[$uid]) : null,
+                'last_ts'    => isset($lastTs[$uid]) ? Carbon::parse($lastTs[$uid])->setTimezone(PulseHelper::viewerTimezone()) : null,
             ];
         }
 
@@ -779,7 +779,7 @@ class AirlineInfoPulseController extends Controller
                 'top_routes'   => $allRoutes->get($aid, collect()),
                 'recent'       => $recentByAc->get($aid, collect()),
                 'recent_users' => $recentUsers,
-                'last_ts'      => isset($lastTs[$aid]) ? Carbon::parse($lastTs[$aid]) : null,
+                'last_ts'      => isset($lastTs[$aid]) ? Carbon::parse($lastTs[$aid])->setTimezone(PulseHelper::viewerTimezone()) : null,
             ];
         }
 
@@ -1016,7 +1016,30 @@ class AirlineInfoPulseController extends Controller
 
             $mxRows = $mxQ->select($mxSelect)->get();
 
+            // Führt SkyAdventures die Wartung dieser Maschine, ist der DisposableBasic-
+            // Eintrag die ZWEITE Stimme zur selben Sache: derselbe Vorfall stand zweimal
+            // im Verlauf — einmal übersetzt und eingefärbt („Harte Landung", rot), einmal
+            // als roher DS-Notiztext („Hard Landing Check") ohne Schweregrad. Genau das
+            // war am 02.09.2026 als „warum gibt's die zweimal?" gemeldet.
+            $saCovered = [];
+            if ($this->schemaHasTable('sa_maintenance_orders')) {
+                $saCovered = DB::table('sa_maintenance_orders')
+                    ->where(function ($q) use ($range) {
+                        $q->whereBetween('started_at', [$range['start'], $range['end']])
+                            ->orWhereBetween('finished_at', [$range['start'], $range['end']])
+                            ->orWhereBetween('created_at', [$range['start'], $range['end']])
+                            ->orWhereBetween('updated_at', [$range['start'], $range['end']]);
+                    })
+                    ->pluck('aircraft_id')
+                    ->map(fn ($x) => (string) $x)
+                    ->flip()->all();
+            }
+
             foreach ($mxRows as $mx) {
+                if (isset($saCovered[(string) ($mx->aircraft_id ?? '')])) {
+                    continue;   // SkyAdventures meldet diesen Vorgang bereits, sauber beschriftet
+                }
+
                 $acType = $mx->ac_icao ?? ($mx->sf_type ?? '');
                 $checkType = trim($mx->last_note);
                 $ts = !empty($mx->mx_ts) ? $mx->mx_ts : ($mx->mx_ts_fallback ?? null);
@@ -1184,7 +1207,18 @@ class AirlineInfoPulseController extends Controller
             }
         }
 
-        return $feed->sortByDesc('ts')->values()->toArray();
+        // Anzeige-Zeitzone erst hier, ganz am Ende: gerechnet und gefiltert wird in UTC
+        // (so liegen die Daten in der Datenbank), angezeigt wird in der Zone des
+        // Betrachters. Die Sortierung ist davon unberührt — sie vergleicht Momente.
+        $tz = $range['tz'] ?? PulseHelper::viewerTimezone();
+
+        return $feed->sortByDesc('ts')
+            ->map(function (array $e) use ($tz): array {
+                $e['ts'] = $e['ts']->copy()->setTimezone($tz);
+
+                return $e;
+            })
+            ->values()->toArray();
     }
 
     private function getAirlineSnapshot(array $range): array

@@ -5,7 +5,11 @@
       <i class="ph-fill ph-bolt" style="color:var(--ap-cyan);"></i>
       <span class="ap-card-title">{{ $t('feed_title') }}</span>
     </div>
-    <div style="font-size:0.7rem;color:var(--ap-muted);">{{ $range['start']->format('d.m.') }} – {{ $range['end']->format('d.m.') }}</div>
+    <div style="font-size:0.7rem;color:var(--ap-muted);">
+      {{ ($range['start_local'] ?? $range['start'])->format('d.m.') }} – {{ ($range['end_local'] ?? $range['end'])->format('d.m.') }}
+      {{-- Zeitzone dazuschreiben: ohne sie ist bei jeder Uhrzeit offen, worauf sie sich bezieht. --}}
+      <span title="{{ $range['tz'] ?? '' }}">· {{ ($range['start_local'] ?? $range['start'])->format('T') }}</span>
+    </div>
   </div>
   <div class="ap-feed-scroll" style="padding:14px 16px;">
     @forelse($feed as $e)

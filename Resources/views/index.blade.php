@@ -464,7 +464,7 @@ html.ap-light .ap-wrap:not(.ap-glass-mode) {
           <h1 class="ap-page-title mb-0">{{ $t('title') }}</h1>
           <a href="{{ url('/airline-info-pulse/guide') }}" title="{{ $t('pilot_guide') }}" style="color:var(--ap-muted);font-size:1.1rem;transition:color .2s;" onmouseover="this.style.color='var(--ap-cyan)'" onmouseout="this.style.color='var(--ap-muted)'"><i class="ph-fill ph-question"></i></a>
         </div>
-        <div class="ap-section-label mt-1">{{ now()->format('d. M. Y') }} · {{ $tfNice }}</div>
+        <div class="ap-section-label mt-1">{{ now($range['tz'] ?? config('app.timezone'))->format('d. M. Y') }} · {{ $tfNice }}</div>
       </div>
     </div>
     <div class="ap-filter-pill" id="ap-tf-buttons">
