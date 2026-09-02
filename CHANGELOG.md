@@ -2,6 +2,27 @@
 
 All notable changes to AirlineInfoPulse are documented here.
 
+## [1.4.0] — 2026-09-02
+
+### Fixed
+
+- **Maintenance feed reported “finished — back in service” for a grounded aircraft.**
+  Reported on GSG (EI-EIE, ITA A320): the feed showed two entries for the same aircraft,
+  both green and closed, while it was in fact grounded after four hard landings and
+  ferrying to Naples for a structural inspection.
+  The feed derived its rows itself from just two columns — `started_at` meant "started",
+  `finished_at` meant "done". That was wrong in three ways: an order that was merely
+  *superseded* (SkyAdventures closes the waiting order as `done` when a shop is assigned)
+  produced a green all-clear at the exact moment the aircraft departed for the shop; an
+  order in state `to_werft` never appeared at all, because `started_at` is only set on
+  arrival; and a grounded `awaiting_werft` order looked like any other.
+  The feed now asks SkyAdventures what an order means
+  (`Support\MaintenanceFeed::eventsFor()`, available from SkyAdventures v0.64.0) and
+  renders the returned events. **Requires SkyAdventures ≥ v0.64.0** for the new behaviour;
+  with an older version the previous path stays active, without errors.
+- The date filter for maintenance events now also covers `created_at`/`updated_at`, so an
+  order that was created today but has not started yet is no longer missing from the feed.
+
 ## [1.4.2] — 2026-06-16
 
 ### Changed

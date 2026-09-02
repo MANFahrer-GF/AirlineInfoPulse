@@ -1099,25 +1099,56 @@ class AirlineInfoPulseController extends Controller
             $moRows = DB::table('sa_maintenance_orders as o')
                 ->leftJoin('aircraft', 'aircraft.id', '=', 'o.aircraft_id')
                 ->where(function ($q) use ($range) {
+                    // created_at/updated_at gehören dazu: ein Auftrag im Zustand 'to_werft'
+                    // hat noch KEIN started_at (das wird erst beim Eintreffen gesetzt) und
+                    // fiel sonst komplett aus dem Verlauf — obwohl gerade er die Piloten
+                    // betrifft. Gefunden 02.09.2026 an EI-EIE.
                     $q->whereBetween('o.started_at', [$range['start'], $range['end']])
-                        ->orWhereBetween('o.finished_at', [$range['start'], $range['end']]);
+                        ->orWhereBetween('o.finished_at', [$range['start'], $range['end']])
+                        ->orWhereBetween('o.created_at', [$range['start'], $range['end']])
+                        ->orWhereBetween('o.updated_at', [$range['start'], $range['end']]);
                 })
                 ->orderByDesc('o.id')
                 ->limit($limit)
                 ->get([
                     'o.id', 'o.status', 'o.registration', 'o.started_at', 'o.finished_at',
-                    'o.check_type', 'o.reason',
+                    'o.created_at', 'o.updated_at', 'o.check_type', 'o.reason',
+                    'o.werft_icao', 'o.return_icao',
                     'aircraft.icao as ac_icao', 'aircraft.registration as ac_reg',
                 ]);
 
-            // Beschriftung + Schwere kommen aus SkyAdventures, damit ein Schadens-Stopp
-            // nicht als „Wartung (Werft)" durchgeht: der Pilot soll lesen, WAS passiert ist
-            // (harte Landung, Tail Strike …) — und Schaden gehört rot, nicht cyan.
+            // WELCHE Meldungen ein Auftrag ergibt, weiß SkyAdventures — nicht dieser Feed.
+            // Vorher stand die Ableitung hier: „started_at → Beginn, finished_at → fertig".
+            // Das meldete am 02.09.2026 „fertig — wieder im Einsatz" für einen Auftrag, der
+            // nur ABGELÖST worden war, während die Maschine gerade gesperrt zur Werft flog.
+            // Seit SkyAdventures v0.64.0 liefert MaintenanceFeed::eventsFor() die Zeilen;
+            // ohne das Modul bleibt der alte, einfache Weg als Rückfall bestehen.
+            $hasFeed  = class_exists(\Modules\SkyAdventures\Support\MaintenanceFeed::class);
             $hasLabel = class_exists(\Modules\SkyAdventures\Support\CheckLabel::class);
 
             foreach ($moRows as $mo) {
                 $reg  = (string) ($mo->registration ?: ($mo->ac_reg ?? ''));
                 $icao = (string) ($mo->ac_icao ?? '');
+
+                if ($hasFeed) {
+                    foreach (\Modules\SkyAdventures\Support\MaintenanceFeed::eventsFor($mo) as $ev) {
+                        if (! $ev['at']->between($range['start'], $range['end'])) {
+                            continue;
+                        }
+                        $feed->push([
+                            'ts'   => $ev['at'],
+                            'type' => 'maintenance',
+                            'data' => [
+                                'mx_type' => $ev['label'],
+                                'mx_sev'  => $ev['sev'],
+                                'ac_icao' => $icao,
+                                'ac_reg'  => $reg,
+                            ],
+                        ]);
+                    }
+
+                    continue;
+                }
 
                 [$label, $sev] = $hasLabel
                     ? \Modules\SkyAdventures\Support\CheckLabel::for($mo->check_type ?? null, $mo->reason ?? null)
