@@ -2,7 +2,7 @@
 
 All notable changes to AirlineInfoPulse are documented here.
 
-## [1.4.0] — 2026-09-02
+## [1.4.4] — 2026-09-02
 
 ### Fixed
 
