@@ -2,6 +2,30 @@
 
 All notable changes to AirlineInfoPulse are documented here.
 
+## [1.5.1] — 2026-10-22
+
+### Fixed
+
+- **Dashboard loads about a second faster.** The quickstart suggestions were picked with
+  `ORDER BY RAND()` over the full flights table including an airline join — on GSG
+  ~190,000 rows, about 1 s on every page view. The random pick now runs over flight IDs
+  only (index on `active`, `visible`), then loads just those rows: ~0.1 s. Suggestions
+  are still shuffled on every page view. Measured on a copy of production: page
+  2.5 s → 1.4 s.
+- **Quickstart no longer suggests deleted or hidden flights.** Only `active` was filtered;
+  on GSG 119 of 200 suggestions were inactive, hidden or soft-deleted. Now only active,
+  visible, not deleted flights are offered.
+- **Schema checks are cached for one hour** in the application cache instead of only per
+  request (about 20 `information_schema` queries per page view). Without an application
+  cache nothing changes.
+
+### Changed
+
+- **Landing colour green now ends at -150 fpm instead of -299 fpm**, and the guide texts
+  for the landing record and landing-rate FAQ were updated (aligned with SkyOps and
+  AeroACARS 1.6.3). These changes had been live on GSG since 2026-08-14 but were missing
+  from the repository.
+
 ## [1.5.0] — 2026-09-02
 
 ### Changed

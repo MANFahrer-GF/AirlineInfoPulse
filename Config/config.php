@@ -48,8 +48,10 @@ return [
      * Landing rate color thresholds (fpm, negative values)
      */
     'landing_rate_thresholds' => [
-        'green'  => -299,   // 0 to -299 = green (butter landing)
-        'orange' => -499,   // -300 to -499 = orange (acceptable)
+        'green'  => -150,   // 0 to -150 = gruen. Seit AeroACARS 1.6.3 von -299 gesenkt —
+        // dieselbe Landung hiess hier 'Butterweich', in SkyOps aber
+        // 'akzeptabel, spuerbar'. Zwei GSG-Seiten, gegensaetzliches Urteil.
+        'orange' => -499,   // -151 bis -499 = orange (akzeptabel)
         // everything below = red (hard landing)
     ],
 

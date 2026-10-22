@@ -10,6 +10,7 @@ use App\Models\Enums\PirepState;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Modules\AirlineInfoPulse\Helpers\PulseHelper;
@@ -47,22 +48,27 @@ class AirlineInfoPulseController extends Controller
         }
     }
 
-    /** Schema::hasTable() mit Cache */
+    /**
+     * Schema::hasTable() mit Cache. v1.5.1: zusaetzlich ueber den
+     * Anwendungs-Cache (1 h) — der statische Speicher gilt nur fuer einen
+     * Request, und jede Pruefung ist eine information_schema-Abfrage
+     * (~10 ms, ~20 je Dashboard-Aufruf). Ohne Anwendungs-Cache wie bisher.
+     */
     private function schemaHasTable(string $table): bool
     {
         $key = "table:{$table}";
         if (!isset(self::$schemaCache[$key])) {
-            self::$schemaCache[$key] = Schema::hasTable($table);
+            self::$schemaCache[$key] = (bool) Cache::remember('airlineinfopulse.schema.'.$key, 3600, fn () => Schema::hasTable($table));
         }
         return self::$schemaCache[$key];
     }
 
-    /** Schema::hasColumn() mit Cache */
+    /** Schema::hasColumn() mit Cache (wie schemaHasTable) */
     private function schemaHasColumn(string $table, string $col): bool
     {
         $key = "col:{$table}.{$col}";
         if (!isset(self::$schemaCache[$key])) {
-            self::$schemaCache[$key] = Schema::hasColumn($table, $col);
+            self::$schemaCache[$key] = (bool) Cache::remember('airlineinfopulse.schema.'.$key, 3600, fn () => Schema::hasColumn($table, $col));
         }
         return self::$schemaCache[$key];
     }
@@ -811,7 +817,29 @@ class AirlineInfoPulseController extends Controller
             $q->addSelect('flights.flight_time');
         }
 
-        $rows = $q->inRandomOrder()->limit(200)->get();
+        // v1.5.1: Zufall erst ueber die IDs, dann nur diese Zeilen laden.
+        // Vorher lief ORDER BY RAND() ueber alle ~190.000 Flugzeilen samt
+        // Airline-Join — gemessen ~1 s bei JEDEM Aufruf des Dashboards. Die
+        // ID-Auswahl kommt mit dem Index (active, visible) aus: ~0,1 s.
+        // Gleichzeitig: geloeschte und unsichtbare Fluege wurden bisher mit
+        // vorgeschlagen (auf GSG 12.039 aktive, aber geloeschte Fluege).
+        // `deleted_at` steht in keinem Index, deshalb wird es erst im zweiten
+        // Schritt gefiltert — und dafuer etwas mehr als 200 IDs gezogen.
+        $idQ = DB::table('flights');
+        if ($this->schemaHasColumn('flights', 'active')) {
+            $idQ->where('active', 1);
+        }
+        if ($this->schemaHasColumn('flights', 'visible')) {
+            $idQ->where('visible', 1);
+            $q->where('flights.visible', 1);
+        }
+        if ($this->schemaHasColumn('flights', 'deleted_at')) {
+            $q->whereNull('flights.deleted_at');
+        }
+        $ids = $idQ->inRandomOrder()->limit(260)->pluck('id')->all();
+        $byId = $ids === [] ? collect() : $q->whereIn('flights.id', $ids)->get()->keyBy('id');
+        // Reihenfolge der Zufallsauswahl beibehalten
+        $rows = collect($ids)->map(fn ($id) => $byId->get($id))->filter()->take(200)->values();
 
         // Airport names
         $aptNames = [];
